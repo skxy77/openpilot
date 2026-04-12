@@ -92,7 +92,7 @@ def get_stop_distance(personality=log.LongitudinalPersonality.standard):
   elif personality==log.LongitudinalPersonality.aggressive:
     return 4.5  # aggressive mode
   elif personality==log.LongitudinalPersonality.traffic:
-    return 1.0  # traffic mode
+    return 1.5  # traffic mode
   else:
     raise NotImplementedError("Longitudinal personality not supported")
 
@@ -347,8 +347,14 @@ class LongitudinalMpc:
     # To estimate a safe distance from a moving lead, we calculate how much stopping
     # distance that lead needs as a minimum. We can add that to the current distance
     # and then treat that as a stopped car/obstacle at this new distance.
-    lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1])
-    lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1])
+    # Offset to allow personality-specific stop distances (solver hardcodes standard 6.0m).
+    # Scaled by lead speed: full effect when stopped, fades out by 10 m/s so driving gap is unchanged.
+    stop_distance_offset = get_stop_distance(log.LongitudinalPersonality.standard) - get_stop_distance(personality)
+    lead_0_speed_scale = np.clip(1.0 - lead_xv_0[:,1] / 10.0, 0.0, 1.0)
+    lead_1_speed_scale = np.clip(1.0 - lead_xv_1[:,1] / 10.0, 0.0, 1.0)
+
+    lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1]) + stop_distance_offset * lead_0_speed_scale
+    lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1]) + stop_distance_offset * lead_1_speed_scale
 
     # Fake an obstacle for cruise, this ensures smooth acceleration to set speed
     # when the leads are no factor.
