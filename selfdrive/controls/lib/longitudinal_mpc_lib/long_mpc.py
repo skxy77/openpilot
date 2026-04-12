@@ -97,6 +97,13 @@ def get_stop_distance(personality=log.LongitudinalPersonality.standard):
   else:
     raise NotImplementedError("Longitudinal personality not supported")
 
+def get_obstacle_cost(personality=log.LongitudinalPersonality.standard):
+  if personality==log.LongitudinalPersonality.traffic:
+    return 12.  # 4x standard: overcome weak gap-closure at low speed due to (v_ego+10) normalization
+                # If gap still very big, can increase to 15 or 20 to be more aggressive about closing it.
+  else:
+    return X_EGO_OBSTACLE_COST
+
 # To treat a moving lead as an obstacle, we can calculate how much distance that lead would need to brake to a stop,
 # and then add that to the current distance.
 # This is a simplified model of the lead's future trajectory,
@@ -296,8 +303,9 @@ class LongitudinalMpc:
 
   def set_weights(self, prev_accel_constraint=True, personality=log.LongitudinalPersonality.standard):
     jerk_factor = get_jerk_factor(personality)
+    obstacle_cost = get_obstacle_cost(personality)
     a_change_cost = A_CHANGE_COST if prev_accel_constraint else 0
-    cost_weights = [X_EGO_OBSTACLE_COST, X_EGO_COST, V_EGO_COST, A_EGO_COST, jerk_factor * a_change_cost, jerk_factor * J_EGO_COST]
+    cost_weights = [obstacle_cost, X_EGO_COST, V_EGO_COST, A_EGO_COST, jerk_factor * a_change_cost, jerk_factor * J_EGO_COST]
     constraint_cost_weights = [LIMIT_COST, LIMIT_COST, LIMIT_COST, DANGER_ZONE_COST]
     self.set_cost_weights(cost_weights, constraint_cost_weights)
 
