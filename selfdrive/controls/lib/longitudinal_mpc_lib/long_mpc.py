@@ -58,6 +58,7 @@ STOP_DISTANCE = 6.0
 CRUISE_MIN_ACCEL = -1.2
 CRUISE_MAX_ACCEL = 1.0
 MIN_X_LEAD_FACTOR = 0.5
+LEAD_LOST_FADE_TIME = 3.0  # seconds to fade out last known lead obstacle after lead disappears
 
 def get_jerk_factor(personality=log.LongitudinalPersonality.standard):
   if personality==log.LongitudinalPersonality.relaxed:
@@ -264,6 +265,9 @@ class LongitudinalMpc:
 
     self.last_cloudlog_t = 0
     self.status = False
+    self.prev_lead_status = False
+    self.lead_lost_timer = 0.0
+    self.prev_lead_obstacle = None
     self.crash_cnt = 0.0
     self.solution_status = 0
     # timers
@@ -355,6 +359,23 @@ class LongitudinalMpc:
 
     lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1]) + stop_distance_offset * lead_0_speed_scale
     lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1]) + stop_distance_offset * lead_1_speed_scale
+
+    # When a lead disappears, gradually fade out the last known obstacle over LEAD_LOST_FADE_TIME
+    # to prevent instant acceleration (which causes sudden braking when a new lead is detected)
+    cur_lead_status = radarstate.leadOne.status or radarstate.leadTwo.status
+    if self.prev_lead_status and not cur_lead_status:
+      # Lead just disappeared — start fade timer and save last obstacle
+      self.lead_lost_timer = LEAD_LOST_FADE_TIME
+      self.prev_lead_obstacle = np.minimum(lead_0_obstacle, lead_1_obstacle).copy()
+    if self.lead_lost_timer > 0 and self.prev_lead_obstacle is not None:
+      fade = self.lead_lost_timer / LEAD_LOST_FADE_TIME  # 1.0 → 0.0 as time passes
+      # Blend: keep last known obstacle weighted by fade, use min so real closer leads still brake
+      faded_obstacle = fade * self.prev_lead_obstacle + (1.0 - fade) * lead_0_obstacle
+      lead_0_obstacle = np.minimum(lead_0_obstacle, faded_obstacle)
+      self.lead_lost_timer = max(0.0, self.lead_lost_timer - self.dt)
+    elif self.lead_lost_timer <= 0:
+      self.prev_lead_obstacle = None
+    self.prev_lead_status = cur_lead_status
 
     # Fake an obstacle for cruise, this ensures smooth acceleration to set speed
     # when the leads are no factor.
