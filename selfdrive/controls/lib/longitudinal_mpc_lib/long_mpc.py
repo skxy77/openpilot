@@ -409,8 +409,11 @@ class LongitudinalMpc:
     self.params[:,5] = LEAD_DANGER_FACTOR
 
     self.run()
+    # Don't trigger FCW at low speeds (traffic jams) where close following
+    # distances cause frequent false crash predictions from radar noise
     if (np.any(lead_xv_0[FCW_IDXS,0] - self.x_sol[FCW_IDXS,0] < CRASH_DISTANCE) and
-            radarstate.leadOne.modelProb > 0.9):
+            radarstate.leadOne.modelProb > 0.9 and
+            v_ego > 5.0):
       self.crash_cnt += 1
     else:
       self.crash_cnt = 0
