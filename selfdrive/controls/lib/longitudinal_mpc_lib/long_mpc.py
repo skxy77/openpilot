@@ -365,8 +365,26 @@ class LongitudinalMpc:
     lead_0_speed_scale = np.clip(1.0 - lead_xv_0[:,1] / 10.0, 0.0, 1.0)
     lead_1_speed_scale = np.clip(1.0 - lead_xv_1[:,1] / 10.0, 0.0, 1.0)
 
-    lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1]) + stop_distance_offset * lead_0_speed_scale
-    lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1]) + stop_distance_offset * lead_1_speed_scale
+    # Reduce stop gap at low ego speeds (< 10 km/h) for closer stopping behind lead.
+    # Adds up to 2.0m positive offset to obstacle (= 2.0m closer effective stop distance).
+    LOW_SPEED_THRESHOLD = 2.78  # 10 km/h in m/s
+    LOW_SPEED_STOP_REDUCTION = 2.0  # meters closer at standstill
+    ego_low_speed_factor = np.clip(1.0 - v_ego / LOW_SPEED_THRESHOLD, 0.0, 1.0)
+    low_speed_proximity_offset = LOW_SPEED_STOP_REDUCTION * ego_low_speed_factor
+
+    # Earlier braking when approaching a much slower / stopped vehicle at speed.
+    # Subtracts from obstacle position so MPC sees the lead as closer → brakes sooner.
+    # Active only when ego > 30 km/h; scales with speed differential (ego − lead).
+    EARLY_BRAKE_EGO_SPEED = 8.33   # 30 km/h – buffer inactive below this
+    EARLY_BRAKE_FACTOR = 0.35      # extra ~0.35 s of following per m/s speed difference
+    ego_fast_factor = np.clip((v_ego - EARLY_BRAKE_EGO_SPEED) / EARLY_BRAKE_EGO_SPEED, 0.0, 1.0)
+    speed_diff_0 = np.clip(v_ego - lead_xv_0[:,1], 0.0, 1e8)
+    speed_diff_1 = np.clip(v_ego - lead_xv_1[:,1], 0.0, 1e8)
+    early_brake_buffer_0 = ego_fast_factor * speed_diff_0 * EARLY_BRAKE_FACTOR
+    early_brake_buffer_1 = ego_fast_factor * speed_diff_1 * EARLY_BRAKE_FACTOR
+
+    lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1]) + stop_distance_offset * lead_0_speed_scale + low_speed_proximity_offset - early_brake_buffer_0
+    lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1]) + stop_distance_offset * lead_1_speed_scale + low_speed_proximity_offset - early_brake_buffer_1
 
     # When a lead disappears, gradually fade out the last known obstacle over LEAD_LOST_FADE_TIME
     # to prevent instant acceleration (which causes sudden braking when a new lead is detected)
