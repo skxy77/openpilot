@@ -366,9 +366,9 @@ class LongitudinalMpc:
     lead_1_speed_scale = np.clip(1.0 - lead_xv_1[:,1] / 10.0, 0.0, 1.0)
 
     # Reduce stop gap at low ego speeds (< 10 km/h) for closer stopping behind lead.
-    # Adds up to 2.0m positive offset to obstacle (= 2.0m closer effective stop distance).
+    # Adds up to 3.0m positive offset to obstacle (= 3.0m closer effective stop distance).
     LOW_SPEED_THRESHOLD = 2.78  # 10 km/h in m/s
-    LOW_SPEED_STOP_REDUCTION = 2.0  # meters closer at standstill
+    LOW_SPEED_STOP_REDUCTION = 3.0  # meters closer at standstill
     ego_low_speed_factor = np.clip(1.0 - v_ego / LOW_SPEED_THRESHOLD, 0.0, 1.0)
     low_speed_proximity_offset = LOW_SPEED_STOP_REDUCTION * ego_low_speed_factor
 
