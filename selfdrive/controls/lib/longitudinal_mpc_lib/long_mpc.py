@@ -372,6 +372,13 @@ class LongitudinalMpc:
     ego_low_speed_factor = np.clip(1.0 - v_ego / LOW_SPEED_THRESHOLD, 0.0, 1.0)
     low_speed_proximity_offset = LOW_SPEED_STOP_REDUCTION * ego_low_speed_factor
 
+    # Reduce following gap at medium ego speeds (< 30 km/h) for closer tailing.
+    # Adds up to 2.0m positive offset to obstacle, linearly tapering to 0 at 30 km/h.
+    MED_SPEED_THRESHOLD = 8.33  # 30 km/h in m/s
+    MED_SPEED_FOLLOW_REDUCTION = 2.0  # meters closer at standstill
+    ego_med_speed_factor = np.clip(1.0 - v_ego / MED_SPEED_THRESHOLD, 0.0, 1.0)
+    med_speed_proximity_offset = MED_SPEED_FOLLOW_REDUCTION * ego_med_speed_factor
+
     # Earlier braking when approaching a much slower / stopped vehicle at speed.
     # Subtracts from obstacle position so MPC sees the lead as closer → brakes sooner.
     # Active only when ego > 30 km/h; scales with speed differential (ego − lead).
@@ -383,8 +390,8 @@ class LongitudinalMpc:
     early_brake_buffer_0 = ego_fast_factor * speed_diff_0 * EARLY_BRAKE_FACTOR
     early_brake_buffer_1 = ego_fast_factor * speed_diff_1 * EARLY_BRAKE_FACTOR
 
-    lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1]) + stop_distance_offset * lead_0_speed_scale + low_speed_proximity_offset - early_brake_buffer_0
-    lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1]) + stop_distance_offset * lead_1_speed_scale + low_speed_proximity_offset - early_brake_buffer_1
+    lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1]) + stop_distance_offset * lead_0_speed_scale + low_speed_proximity_offset + med_speed_proximity_offset - early_brake_buffer_0
+    lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1]) + stop_distance_offset * lead_1_speed_scale + low_speed_proximity_offset + med_speed_proximity_offset - early_brake_buffer_1
 
     # When a lead disappears, gradually fade out the last known obstacle over LEAD_LOST_FADE_TIME
     # to prevent instant acceleration (which causes sudden braking when a new lead is detected)
