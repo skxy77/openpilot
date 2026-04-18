@@ -93,13 +93,13 @@ def get_stop_distance(personality=log.LongitudinalPersonality.standard):
   elif personality==log.LongitudinalPersonality.aggressive:
     return 4.5  # aggressive mode
   elif personality==log.LongitudinalPersonality.traffic:
-    return 1.5  # traffic mode
+    return 0.5  # traffic mode
   else:
     raise NotImplementedError("Longitudinal personality not supported")
 
 def get_obstacle_cost(personality=log.LongitudinalPersonality.standard):
   if personality==log.LongitudinalPersonality.traffic:
-    return 12.  # 4x standard: overcome weak gap-closure at low speed due to (v_ego+10) normalization
+    return 15.  # 4x standard: overcome weak gap-closure at low speed due to (v_ego+10) normalization
                 # If gap still very big, can increase to 15 or 20 to be more aggressive about closing it.
   else:
     return X_EGO_OBSTACLE_COST
@@ -383,7 +383,7 @@ class LongitudinalMpc:
     # Subtracts from obstacle position so MPC sees the lead as closer → brakes sooner.
     # Active only when ego > 30 km/h; scales with speed differential (ego − lead).
     EARLY_BRAKE_EGO_SPEED = 8.33   # 30 km/h – buffer inactive below this
-    EARLY_BRAKE_FACTOR = 0.35      # extra ~0.35 s of following per m/s speed difference
+    EARLY_BRAKE_FACTOR = 0.45      # extra ~0.45 s of following per m/s speed difference
     ego_fast_factor = np.clip((v_ego - EARLY_BRAKE_EGO_SPEED) / EARLY_BRAKE_EGO_SPEED, 0.0, 1.0)
     speed_diff_0 = np.clip(v_ego - lead_xv_0[:,1], 0.0, 1e8)
     speed_diff_1 = np.clip(v_ego - lead_xv_1[:,1], 0.0, 1e8)
