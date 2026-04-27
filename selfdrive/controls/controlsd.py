@@ -28,6 +28,12 @@ LaneChangeDirection = log.LaneChangeDirection
 
 ACTUATOR_FIELDS = tuple(car.CarControl.Actuators.schema.fields.keys())
 
+# Rightmost lane slow-speed offset: nudge car right to give room for motorcycles on the left
+RIGHTMOST_LANE_CURVATURE_OFFSET = 0.002  # positive curvature = steer right
+RIGHTMOST_LANE_MAX_SPEED = 50 * CV.KPH_TO_MS  # only active below 30 km/h
+RIGHTMOST_LANE_EDGE_DIST_THRESHOLD = 0.5  # max distance (m) between right lane line and right road edge
+RIGHTMOST_LANE_OFFSET_SMOOTH = 0.03  # smoothing factor per control frame (ramp up/down ~3s)
+
 
 class Controls(ControlsExt):
   def __init__(self) -> None:
@@ -65,6 +71,37 @@ class Controls(ControlsExt):
       self.LaC = LatControlTorque(self.CP, self.CP_SP, self.CI, DT_CTRL)
 
     self.LaC = ControlsExt.initialize_lateral_control(self, self.LaC, self.CI, DT_CTRL)
+
+    self._rightmost_lane_offset = 0.0  # filtered curvature offset for rightmost lane nudge
+
+  def _is_rightmost_lane(self, model_v2) -> bool:
+    """Detect if the car is in the rightmost lane by checking if the right road edge
+    is close to the right lane line (no full lane between them)."""
+    try:
+      right_lane_y = model_v2.laneLines[2].y[0]
+      right_edge_y = model_v2.roadEdges[1].y[0]
+    except (IndexError, AttributeError):
+      return False
+
+    right_lane_visible = model_v2.laneLineProbs[2] > 0.5
+    edge_close_to_lane = abs(right_edge_y - right_lane_y) < RIGHTMOST_LANE_EDGE_DIST_THRESHOLD
+    road_edge_confident = model_v2.roadEdgeStds[1] < 2.0
+
+    return right_lane_visible and edge_close_to_lane and road_edge_confident
+
+  def _apply_rightmost_lane_offset(self, model_v2, v_ego, desired_curvature, lat_active) -> float:
+    """When in the rightmost lane at low speed, add a small curvature bias to
+    nudge the car slightly to the right, giving room for motorcycles to pass on the left."""
+    if not lat_active or v_ego > RIGHTMOST_LANE_MAX_SPEED:
+      target = 0.0
+    elif self._is_rightmost_lane(model_v2):
+      target = RIGHTMOST_LANE_CURVATURE_OFFSET
+    else:
+      target = 0.0
+
+    # Smooth ramp up/down to avoid sudden steering changes
+    self._rightmost_lane_offset += RIGHTMOST_LANE_OFFSET_SMOOTH * (target - self._rightmost_lane_offset)
+    return desired_curvature + self._rightmost_lane_offset
 
   def update(self):
     self.sm.update(15)
@@ -139,6 +176,10 @@ class Controls(ControlsExt):
       new_desired_curvature = self.sm['lateralManeuverPlan'].desiredCurvature if CC.latActive else self.curvature
     else:
       new_desired_curvature = model_v2.action.desiredCurvature if CC.latActive else self.curvature
+
+    # Rightmost lane slow-speed offset
+    new_desired_curvature = self._apply_rightmost_lane_offset(model_v2, CS.vEgo, new_desired_curvature, CC.latActive)
+
     self.desired_curvature, curvature_limited = clip_curvature(CS.vEgo, self.desired_curvature, new_desired_curvature, lp.roll)
     lat_delay = self.sm["liveDelay"].lateralDelay + LAT_SMOOTH_SECONDS
 
