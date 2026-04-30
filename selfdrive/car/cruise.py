@@ -139,8 +139,8 @@ class VCruiseHelper(VCruiseHelperSP):
         self.button_change_states[b.type.raw] = {"standstill": CS.cruiseState.standstill, "enabled": enabled}
 
   def initialize_v_cruise(self, CS, experimental_mode: bool, dynamic_experimental_control: bool) -> None:
-    # initializing is handled by the PCM, unless sunnypilot manages cruise speed (ICBM)
-    if self.CP.pcmCruise and self.CP_SP.pcmCruiseSpeed:
+    # initializing is handled by the PCM
+    if self.CP.pcmCruise:
       return
 
     initial_experimental_mode = experimental_mode and not dynamic_experimental_control
