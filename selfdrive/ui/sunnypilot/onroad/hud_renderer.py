@@ -23,7 +23,9 @@ from openpilot.system.ui.lib.multilang import tr
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 
 SLA_ACTIVE_COLOR = rl.Color(0x91, 0x9b, 0x95, 0xff)
-
+# Lead distance display constants
+LEAD_DIST_FONT_SIZE = 50
+LEAD_DIST_LABEL_SIZE = 30
 
 class HudRendererSP(HudRenderer):
   def __init__(self):
@@ -44,6 +46,10 @@ class HudRendererSP(HudRenderer):
     self.speed_cluster: float = 0.0
     self.speed_conv: float = CV.MS_TO_KPH if ui_state.is_metric else CV.MS_TO_MPH
 
+    # Lead distance display
+    self.lead_dist: float = 0.0
+    self.lead_status: bool = False
+
   def _update_state(self) -> None:
     if ui_state.sm.recv_frame["carState"] < ui_state.started_frame:
       return
@@ -60,6 +66,11 @@ class HudRendererSP(HudRenderer):
     self.turn_signal_controller.update()
     self.circular_alerts_renderer.update()
     self.speed_renderer.update()
+
+    # Update lead distance
+    lead_one = ui_state.sm['radarState'].leadOne
+    self.lead_status = lead_one.status
+    self.lead_dist = lead_one.dRel
 
   def _get_icbm_status(self):
     if not self.pcm_cruise_speed and ui_state.sm['carControl'].enabled:
@@ -128,8 +139,52 @@ class HudRendererSP(HudRenderer):
   def _draw_current_speed(self, rect: rl.Rectangle) -> None:
     self.speed_renderer.render(rect)
 
+  def _draw_lead_distance(self, rect: rl.Rectangle) -> None:
+    """Draw the live distance to the lead car at the top right, below the exp button."""
+    if not self.lead_status:
+      return
+
+    dist = self.lead_dist
+    if ui_state.is_metric:
+      dist_text = f"{dist:.1f}"
+      unit_text = "m"
+    else:
+      dist_text = f"{dist * 3.28084:.0f}"
+      unit_text = "ft"
+
+    # Color based on distance: red < 10m, orange < 25m, white otherwise
+    if dist < 10:
+      color = rl.RED
+    elif dist < 25:
+      color = rl.Color(255, 188, 0, 255)
+    else:
+      color = COLORS.WHITE
+
+    # Position: top right, below the exp button (button is at y+30, size 192)
+    box_x = rect.x + rect.width - UI_CONFIG.border_size - UI_CONFIG.button_size
+    box_y = rect.y + UI_CONFIG.border_size + UI_CONFIG.button_size + 10
+    box_w = UI_CONFIG.button_size
+    box_h = 80
+
+    # Background
+    bg_rect = rl.Rectangle(box_x, box_y, box_w, box_h)
+    rl.draw_rectangle_rounded(bg_rect, 0.3, 10, COLORS.BLACK_TRANSLUCENT)
+
+    # Distance value
+    dist_size = measure_text_cached(self._font_bold, dist_text, LEAD_DIST_FONT_SIZE)
+    dist_x = box_x + (box_w - dist_size.x) / 2
+    dist_y = box_y + 5
+    rl.draw_text_ex(self._font_bold, dist_text, rl.Vector2(dist_x, dist_y), LEAD_DIST_FONT_SIZE, 0, color)
+
+    # Unit label
+    unit_size = measure_text_cached(self._font_medium, unit_text, LEAD_DIST_LABEL_SIZE)
+    unit_x = box_x + (box_w - unit_size.x) / 2
+    unit_y = box_y + box_h - unit_size.y - 5
+    rl.draw_text_ex(self._font_medium, unit_text, rl.Vector2(unit_x, unit_y), LEAD_DIST_LABEL_SIZE, 0, COLORS.WHITE_TRANSLUCENT)
+
   def _render(self, rect: rl.Rectangle) -> None:
     super()._render(rect)
+    self._draw_lead_distance(rect)
 
     if ui_state.torque_bar:
       torque_rect = rect
