@@ -169,4 +169,8 @@ class IntelligentCruiseButtonManagement:
         elif self.cruise_button == SendButtonState.increase:
           self.cruise_button = SendButtonState.none
 
+    # Suppress ICBM button output while gas is pressed (let driver accelerate freely)
+    if CS.gasPressed:
+      self.cruise_button = SendButtonState.none
+
     self.is_ready_prev = self.is_ready
