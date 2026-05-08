@@ -123,7 +123,7 @@ class IntelligentCruiseButtonManagement:
     ready = CC.enabled and not CC.cruiseControl.override and not CC.cruiseControl.cancel and not CC.cruiseControl.resume
     button_pressed = any(self.cruise_button_timers[k] > 0 for k in self.cruise_button_timers)
 
-    self.is_ready = ready and not button_pressed and not CS.gasPressed
+    self.is_ready = ready and not button_pressed
 
   def update_lead_safety(self, lead: log.RadarState.LeadData) -> SendButtonState:
     """Override ICBM button based on lead car proximity. Returns forced button or None."""
