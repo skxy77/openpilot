@@ -141,32 +141,32 @@ class HudRendererSP(HudRenderer):
   def _draw_lead_distance(self, rect: rl.Rectangle) -> None:
     """Draw the live distance to the lead car at the top right, below the exp button."""
     if not self.lead_status:
-      return
-
-    dist = self.lead_dist
-    if ui_state.is_metric:
-      dist_text = f"{dist:.1f}"
-      unit_text = "m"
-    else:
-      dist_text = f"{dist * 3.28084:.0f}"
-      unit_text = "ft"
-
-    # Color based on distance: red < 10m, orange < 25m, white otherwise
-    if dist < 10:
-      color = rl.RED
-    elif dist < 25:
-      color = rl.Color(255, 188, 0, 255)
-    else:
+      combined_text = "∞ km" if ui_state.is_metric else "∞ mi"
       color = COLORS.WHITE
+    else:
+      dist = self.lead_dist
+      if ui_state.is_metric:
+        dist_text = f"{dist:.1f}"
+        unit_text = "m"
+      else:
+        dist_text = f"{dist * 3.28084:.0f}"
+        unit_text = "ft"
+
+      # Color based on distance: red < 10m, orange < 25m, white otherwise
+      if dist < 10:
+        color = rl.RED
+      elif dist < 25:
+        color = rl.Color(255, 188, 0, 255)
+      else:
+        color = COLORS.WHITE
+
+      combined_text = f"{dist_text}{unit_text}"
 
     # Position: top right, below the exp button (button is at y+30, size 192)
     box_x = rect.x + rect.width - UI_CONFIG.border_size - UI_CONFIG.button_size
     box_y = rect.y + UI_CONFIG.border_size + UI_CONFIG.button_size + 10
     box_w = UI_CONFIG.button_size
     box_h = 60
-
-    # Combine distance and unit into one string
-    combined_text = f"{dist_text}{unit_text}"
 
     # Background
     bg_rect = rl.Rectangle(box_x, box_y, box_w, box_h)
