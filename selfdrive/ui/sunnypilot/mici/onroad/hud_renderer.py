@@ -33,7 +33,7 @@ class HudRendererSP(HudRenderer):
 
   def _draw_lead_distance(self, rect: rl.Rectangle) -> None:
     if not self.lead_status:
-      dist_text = "∞ km" if ui_state.is_metric else "∞ mi"
+      dist_text = "-- km" if ui_state.is_metric else "-- mi"
       color = COLORS.WHITE
     else:
       dist = self.lead_dist
