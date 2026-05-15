@@ -56,6 +56,10 @@ class VCruiseHelper(VCruiseHelperSP):
         self._update_v_cruise_non_pcm(CS, _enabled, is_metric)
         self.update_speed_limit_assist_v_cruise_non_pcm()
         self.v_cruise_cluster_kph = self.v_cruise_kph
+      elif not self.CP_SP.pcmCruiseSpeed:
+        # pcmCruise=True, pcmCruiseSpeed=False (ICBM), but _enabled is temporarily False
+        # Don't overwrite with PCM speed — keep sunnypilot-managed speed unchanged
+        pass
       else:
         self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
         self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
@@ -139,16 +143,20 @@ class VCruiseHelper(VCruiseHelperSP):
         self.button_change_states[b.type.raw] = {"standstill": CS.cruiseState.standstill, "enabled": enabled}
 
   def initialize_v_cruise(self, CS, experimental_mode: bool, dynamic_experimental_control: bool) -> None:
-    # initializing is handled by the PCM
-    if self.CP.pcmCruise:
+    # initializing is handled by the PCM, unless ICBM manages set speed
+    if self.CP.pcmCruise and self.CP_SP.pcmCruiseSpeed:
       return
 
     initial_experimental_mode = experimental_mode and not dynamic_experimental_control
     initial = V_CRUISE_INITIAL_EXPERIMENTAL_MODE if initial_experimental_mode else V_CRUISE_INITIAL
 
-    if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents) and self.v_cruise_initialized:
+    if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents) and self.v_cruise_kph_last > 0:
       self.v_cruise_kph = self.v_cruise_kph_last
     else:
-      self.v_cruise_kph = int(round(np.clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
+      # For pcmCruise with ICBM: initialize from the PCM's current cluster speed if available
+      if self.CP.pcmCruise and CS.cruiseState.speedCluster > 0:
+        self.v_cruise_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
+      else:
+        self.v_cruise_kph = int(round(np.clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
 
     self.v_cruise_cluster_kph = self.v_cruise_kph
