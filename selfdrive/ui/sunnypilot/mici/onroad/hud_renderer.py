@@ -27,9 +27,13 @@ class HudRendererSP(HudRenderer):
     super()._update_state()
     self.blind_spot_indicators.update()
 
-    lead_one = ui_state.sm['radarState'].leadOne
-    self.lead_status = lead_one.status
-    self.lead_dist = lead_one.dRel
+    if ui_state.sm.recv_frame.get('radarState', 0) > 0:
+      lead_one = ui_state.sm['radarState'].leadOne
+      self.lead_status = lead_one.status
+      self.lead_dist = lead_one.dRel
+    else:
+      self.lead_status = False
+      self.lead_dist = 0.0
 
   def _draw_lead_distance(self, rect: rl.Rectangle) -> None:
     if not self.lead_status:
