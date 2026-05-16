@@ -1,24 +1,23 @@
 import pyray as rl
-from openpilot.selfdrive.ui import UI_BORDER_SIZE
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.hardware import HARDWARE
 from openpilot.system.ui.lib.application import gui_app, FontWeight
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.widgets import Widget
 
-FONT_SIZE = 38
-PADDING = 12
+FONT_SIZE = 18
+PADDING = 4
 BG_COLOR = rl.Color(0, 0, 0, 180)
 TEXT_COLOR = rl.Color(255, 200, 50, 230)
-UPDATE_TEXT = "Update pending reboot"
+UPDATE_TEXT = "Update ready"
 
 BTN_TEXT = "Reboot"
-BTN_FONT_SIZE = 34
+BTN_FONT_SIZE = 16
 BTN_COLOR = rl.Color(255, 255, 255, 230)
 BTN_COLOR_PRESSED = rl.Color(200, 200, 200, 230)
 BTN_TEXT_COLOR = rl.BLACK
-BTN_GAP = 12
-BTN_H_PAD = 20
+BTN_GAP = 4
+BTN_H_PAD = 8
 
 LATER_TEXT = "Later"
 LATER_COLOR = rl.Color(100, 100, 100, 230)
@@ -39,7 +38,6 @@ class UpdateIndicator(Widget):
     self._later_pressed = False
 
   def _render(self, rect: rl.Rectangle) -> None:
-    # Check param every ~100 frames to avoid I/O overhead
     self._check_counter += 1
     if self._check_counter >= 100:
       self._check_counter = 0
@@ -52,9 +50,9 @@ class UpdateIndicator(Widget):
     btn_text_size = measure_text_cached(self._font, BTN_TEXT, BTN_FONT_SIZE)
     later_text_size = measure_text_cached(self._font, LATER_TEXT, BTN_FONT_SIZE)
 
-    # Position at bottom-left of the content rect
-    x = rect.x + UI_BORDER_SIZE + PADDING
-    y = rect.y + rect.height - UI_BORDER_SIZE - FONT_SIZE - PADDING * 2
+    # Position at bottom-left
+    x = rect.x + PADDING + 2
+    y = rect.y + rect.height - FONT_SIZE - PADDING * 3
 
     # Draw text background
     bg_rect = rl.Rectangle(x - PADDING, y - PADDING, text_size.x + PADDING * 2, FONT_SIZE + PADDING * 2)
