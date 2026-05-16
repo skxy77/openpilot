@@ -4,9 +4,7 @@ Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
 This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
-from __future__ import annotations
-
-from cereal import car, log, custom
+from cereal import car, custom
 from opendbc.car import structs, apply_hysteresis
 from openpilot.common.constants import CV
 from openpilot.common.realtime import DT_CTRL
@@ -19,13 +17,7 @@ SendButtonState = custom.IntelligentCruiseButtonManagement.SendButtonState
 
 ALLOWED_SPEED_THRESHOLD = 1.8  # m/s, ~4 MPH
 HYST_GAP = 0.0  # currently disabled; TODO-SP: might need to be brand-specific
-INACTIVE_TIMER = 0.4
-
-# Lead-aware safety: prevent ICBM from increasing speed when a close lead is detected
-LEAD_SAFETY_DIST = 40.0       # m: block increase when lead is closer than this
-LEAD_LOST_COOLDOWN = 3.0      # s: block increase for this duration after close lead disappears
-LEAD_CRITICAL_DIST = 20.0     # m: force decrease when lead is this close AND closing
-LEAD_CRITICAL_VREL = -1.5     # m/s: closing speed threshold for forced decrease
+INACTIVE_TIMER = 0.2
 
 
 SEND_BUTTONS = {
@@ -52,10 +44,6 @@ class IntelligentCruiseButtonManagement:
     self.is_metric = False
 
     self.cruise_button_timers = CRUISE_BUTTON_TIMER
-
-    # Lead safety state
-    self._lead_close_seen = False
-    self._lead_lost_timer = 0.0
 
   @property
   def v_cruise_equal(self) -> bool:
@@ -125,31 +113,7 @@ class IntelligentCruiseButtonManagement:
 
     self.is_ready = ready and not button_pressed
 
-  def update_lead_safety(self, lead: log.RadarState.LeadData) -> SendButtonState:
-    """Override ICBM button based on lead car proximity. Returns forced button or None."""
-    lead_close = lead.status and lead.dRel < LEAD_SAFETY_DIST
-
-    if lead_close:
-      self._lead_close_seen = True
-      self._lead_lost_timer = LEAD_LOST_COOLDOWN
-    else:
-      if self._lead_close_seen:
-        self._lead_lost_timer = max(0.0, self._lead_lost_timer - DT_CTRL)
-        if self._lead_lost_timer <= 0.0:
-          self._lead_close_seen = False
-
-    # Force decrease when lead is very close and closing fast
-    if lead.status and lead.dRel < LEAD_CRITICAL_DIST and lead.vRel < LEAD_CRITICAL_VREL:
-      return SendButtonState.decrease
-
-    # Block increase when close lead detected or recently lost
-    if lead_close or self._lead_close_seen:
-      return SendButtonState.none
-
-    return None  # no override
-
-  def run(self, CS: car.CarState, CC: car.CarControl, LP_SP: custom.LongitudinalPlanSP,
-          is_metric: bool, lead: log.RadarState.LeadData | None = None) -> None:
+  def run(self, CS: car.CarState, CC: car.CarControl, LP_SP: custom.LongitudinalPlanSP, is_metric: bool) -> None:
     if self.CP_SP.pcmCruiseSpeed:
       return
 
@@ -159,15 +123,6 @@ class IntelligentCruiseButtonManagement:
     self.update_readiness(CS, CC)
 
     self.cruise_button = self.update_state_machine()
-
-    # Apply lead safety override after normal state machine
-    if lead is not None:
-      override = self.update_lead_safety(lead)
-      if override is not None:
-        if override == SendButtonState.decrease:
-          self.cruise_button = SendButtonState.decrease
-        elif self.cruise_button == SendButtonState.increase:
-          self.cruise_button = SendButtonState.none
 
     # Suppress ICBM button output while gas is pressed (let driver accelerate freely)
     if CS.gasPressed:
