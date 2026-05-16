@@ -141,7 +141,7 @@ class HudRendererSP(HudRenderer):
   def _draw_lead_distance(self, rect: rl.Rectangle) -> None:
     """Draw the live distance to the lead car at the top right, below the exp button."""
     if not self.lead_status:
-      combined_text = "∞ km" if ui_state.is_metric else "∞ mi"
+      combined_text = "-- km" if ui_state.is_metric else "-- mi"
       color = COLORS.WHITE
     else:
       dist = self.lead_dist
