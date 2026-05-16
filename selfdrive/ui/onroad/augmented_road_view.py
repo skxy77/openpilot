@@ -10,6 +10,7 @@ from openpilot.selfdrive.ui.onroad.driver_state import DriverStateRenderer
 from openpilot.selfdrive.ui.onroad.hud_renderer import HudRenderer
 from openpilot.selfdrive.ui.onroad.model_renderer import ModelRenderer
 from openpilot.selfdrive.ui.onroad.update_indicator import UpdateIndicator
+from openpilot.selfdrive.ui.onroad.wifi_indicator import WifiIndicator
 from openpilot.selfdrive.ui.onroad.cameraview import CameraView
 from openpilot.system.ui.lib.application import gui_app
 from openpilot.common.transformations.camera import DEVICE_CAMERAS, DeviceCameraConfig, view_frame_from_device_frame
@@ -59,6 +60,7 @@ class AugmentedRoadView(CameraView, AugmentedRoadViewSP):
     self.alert_renderer = AlertRenderer()
     self.driver_state_renderer = DriverStateRenderer()
     self._update_indicator = UpdateIndicator()
+    self._wifi_indicator = WifiIndicator()
 
     # debug
     self._pm = messaging.PubMaster(['uiDebug'])
@@ -100,6 +102,7 @@ class AugmentedRoadView(CameraView, AugmentedRoadViewSP):
     self._hud_renderer.render(self._content_rect)
     self.alert_renderer.render(self._content_rect)
     self.driver_state_renderer.render(self._content_rect)
+    self._wifi_indicator.render(self._content_rect)
     self._update_indicator.render(self._content_rect)
 
     # Custom UI extension point - add custom overlays here
