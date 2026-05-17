@@ -148,9 +148,9 @@ class ModelRenderer(Widget, ModelRendererSP):
         self._update_leads(radar_state, path_x_array)
       self._transform_dirty = False
 
-    # Draw elements (hide when disengaged)
+    # Draw lane lines always, path only when engaged
+    self._draw_lane_lines()
     if ui_state.status != UIStatus.DISENGAGED:
-      self._draw_lane_lines()
       self._draw_path(sm)
 
     # if render_lead_indicator and radar_state:
