@@ -31,7 +31,7 @@ class UpdateIndicator(Widget):
     self._font = gui_app.font(FontWeight.SEMI_BOLD)
     self._update_available = False
     self._dismissed = False
-    self._check_counter = 0
+    self._check_counter = 99
     self._btn_rect = rl.Rectangle(0, 0, 0, 0)
     self._btn_pressed = False
     self._later_rect = rl.Rectangle(0, 0, 0, 0)
@@ -50,8 +50,8 @@ class UpdateIndicator(Widget):
     btn_text_size = measure_text_cached(self._font, BTN_TEXT, BTN_FONT_SIZE)
     later_text_size = measure_text_cached(self._font, LATER_TEXT, BTN_FONT_SIZE)
 
-    # Position at bottom-left
-    x = rect.x + PADDING + 2
+    # Position at bottom-left (aligned with DMoji top-left offset)
+    x = rect.x + 16
     y = rect.y + rect.height - FONT_SIZE - PADDING * 3
 
     # Draw text background
