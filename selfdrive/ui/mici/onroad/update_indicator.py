@@ -5,19 +5,16 @@ from openpilot.system.ui.lib.application import gui_app, FontWeight
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.widgets import Widget
 
-FONT_SIZE = 18
-PADDING = 4
-BG_COLOR = rl.Color(0, 0, 0, 180)
-TEXT_COLOR = rl.Color(255, 200, 50, 230)
-UPDATE_TEXT = "Update ready"
+PADDING = 8
 
-BTN_TEXT = "Reboot"
-BTN_FONT_SIZE = 16
+BTN_TEXT = "Restart"
+BTN_FONT_SIZE = 28
 BTN_COLOR = rl.Color(255, 255, 255, 230)
 BTN_COLOR_PRESSED = rl.Color(200, 200, 200, 230)
 BTN_TEXT_COLOR = rl.BLACK
-BTN_GAP = 4
-BTN_H_PAD = 8
+BTN_GAP = 8
+BTN_H_PAD = 16
+BTN_V_PAD = 10
 
 LATER_TEXT = "Later"
 LATER_COLOR = rl.Color(100, 100, 100, 230)
@@ -46,38 +43,28 @@ class UpdateIndicator(Widget):
     if not self._update_available or self._dismissed:
       return
 
-    text_size = measure_text_cached(self._font, UPDATE_TEXT, FONT_SIZE)
     btn_text_size = measure_text_cached(self._font, BTN_TEXT, BTN_FONT_SIZE)
     later_text_size = measure_text_cached(self._font, LATER_TEXT, BTN_FONT_SIZE)
 
-    # Position at bottom-left (aligned with DMoji top-left offset)
+    # Position at bottom-left
     x = rect.x + 16
-    y = rect.y + rect.height - FONT_SIZE - PADDING * 3
+    btn_h = BTN_FONT_SIZE + BTN_V_PAD * 2
+    btn_y = rect.y + rect.height - btn_h - PADDING
 
-    # Draw text background
-    bg_rect = rl.Rectangle(x - PADDING, y - PADDING, text_size.x + PADDING * 2, FONT_SIZE + PADDING * 2)
-    rl.draw_rectangle_rounded(bg_rect, 0.3, 10, BG_COLOR)
-
-    # Draw text
-    rl.draw_text_ex(self._font, UPDATE_TEXT, rl.Vector2(x, y), FONT_SIZE, 0, TEXT_COLOR)
-
-    # Draw reboot button right of the text
+    # Draw restart button
     btn_w = btn_text_size.x + BTN_H_PAD * 2
-    btn_h = FONT_SIZE + PADDING * 2
-    btn_x = bg_rect.x + bg_rect.width + BTN_GAP
-    btn_y = y - PADDING
-    self._btn_rect = rl.Rectangle(btn_x, btn_y, btn_w, btn_h)
+    self._btn_rect = rl.Rectangle(x, btn_y, btn_w, btn_h)
 
     btn_color = BTN_COLOR_PRESSED if self._btn_pressed else BTN_COLOR
     rl.draw_rectangle_rounded(self._btn_rect, 0.3, 10, btn_color)
 
-    btn_text_x = btn_x + (btn_w - btn_text_size.x) / 2
+    btn_text_x = x + (btn_w - btn_text_size.x) / 2
     btn_text_y = btn_y + (btn_h - btn_text_size.y) / 2
     rl.draw_text_ex(self._font, BTN_TEXT, rl.Vector2(btn_text_x, btn_text_y), BTN_FONT_SIZE, 0, BTN_TEXT_COLOR)
 
-    # Draw "Later" button right of reboot
+    # Draw "Later" button right of restart
     later_w = later_text_size.x + BTN_H_PAD * 2
-    later_x = btn_x + btn_w + BTN_GAP
+    later_x = x + btn_w + BTN_GAP
     self._later_rect = rl.Rectangle(later_x, btn_y, later_w, btn_h)
 
     later_color = LATER_COLOR_PRESSED if self._later_pressed else LATER_COLOR

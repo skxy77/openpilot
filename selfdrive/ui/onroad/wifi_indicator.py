@@ -7,7 +7,7 @@ from openpilot.system.ui.widgets import Widget
 
 NetworkType = log.DeviceState.NetworkType
 
-ICON_SIZE = 48
+ICON_SIZE = 32
 BADGE_SIZE = 20
 BADGE_FONT_SIZE = 16
 PADDING = 16
