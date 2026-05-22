@@ -311,7 +311,7 @@ class ModelRenderer(Widget, ModelRendererSP):
       color = rl.Color(255, 255, 255, int(alpha * 255))
 
     if ui_state.status == UIStatus.DISENGAGED:
-      color = rl.Color(0, 0, 0, int(alpha * 255))
+      color = rl.Color(200, 200, 200, int(alpha * 255))
 
     return color
 
