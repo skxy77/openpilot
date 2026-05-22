@@ -1,3 +1,5 @@
+import time
+import threading
 import pyray as rl
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.hardware import HARDWARE
@@ -21,6 +23,8 @@ LATER_COLOR = rl.Color(100, 100, 100, 230)
 LATER_COLOR_PRESSED = rl.Color(70, 70, 70, 230)
 LATER_TEXT_COLOR = rl.WHITE
 
+OFFROAD_WAIT_SECONDS = 3
+
 
 class UpdateIndicator(Widget):
   def __init__(self):
@@ -33,6 +37,14 @@ class UpdateIndicator(Widget):
     self._btn_pressed = False
     self._later_rect = rl.Rectangle(0, 0, 0, 0)
     self._later_pressed = False
+    self._reboot_pending = False
+
+  @staticmethod
+  def _offroad_then_reboot():
+    """Set OffroadMode, wait for transition, then reboot."""
+    ui_state.params.put_bool("OffroadMode", True)
+    time.sleep(OFFROAD_WAIT_SECONDS)
+    HARDWARE.reboot()
 
   def _render(self, rect: rl.Rectangle) -> None:
     self._check_counter += 1
@@ -40,7 +52,7 @@ class UpdateIndicator(Widget):
       self._check_counter = 0
       self._update_available = ui_state.params.get_bool("UpdateAvailable")
 
-    if not self._update_available or self._dismissed:
+    if not self._update_available or self._dismissed or self._reboot_pending:
       return
 
     btn_text_size = measure_text_cached(self._font, BTN_TEXT, BTN_FONT_SIZE)
@@ -86,7 +98,9 @@ class UpdateIndicator(Widget):
   def _handle_mouse_release(self, mouse_pos) -> None:
     pos = rl.Vector2(mouse_pos.x, mouse_pos.y)
     if self._btn_pressed and rl.check_collision_point_rec(pos, self._btn_rect):
-      HARDWARE.reboot()
+      if not self._reboot_pending:
+        self._reboot_pending = True
+        threading.Thread(target=self._offroad_then_reboot, daemon=True).start()
     if self._later_pressed and rl.check_collision_point_rec(pos, self._later_rect):
       self._dismissed = True
     self._btn_pressed = False
