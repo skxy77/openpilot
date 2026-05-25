@@ -365,8 +365,15 @@ class LongitudinalMpc:
     lead_0_speed_scale = np.clip(1.0 - lead_xv_0[:,1] / 10.0, 0.0, 1.0)
     lead_1_speed_scale = np.clip(1.0 - lead_xv_1[:,1] / 10.0, 0.0, 1.0)
 
-    lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1]) + stop_distance_offset * lead_0_speed_scale
-    lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1]) + stop_distance_offset * lead_1_speed_scale
+    # Compensate for weak gap-closure cost at low ego speeds due to /(v_ego+10) normalization.
+    # Adds offset to obstacle so solver thinks target is already reached, preventing 4m stop gap.
+    # Only active for traffic mode; scales from full effect at standstill to zero at 20 km/h.
+    LOW_SPEED_PROXIMITY = 3.5 if personality == log.LongitudinalPersonality.traffic else 0.0
+    low_speed_factor = np.clip(1.0 - v_ego / 5.56, 0.0, 1.0)  # fades to 0 by 20 km/h
+    low_speed_proximity_offset = LOW_SPEED_PROXIMITY * low_speed_factor
+
+    lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1]) + stop_distance_offset * lead_0_speed_scale + low_speed_proximity_offset
+    lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1]) + stop_distance_offset * lead_1_speed_scale + low_speed_proximity_offset
 
     # When a lead disappears, gradually fade out the last known obstacle over LEAD_LOST_FADE_TIME
     # to prevent instant acceleration (which causes sudden braking when a new lead is detected)
