@@ -40,8 +40,8 @@ class WifiIndicator(Widget):
     if not (self._is_wifi and self._has_internet):
       return
 
-    # Position at bottom-right
-    x = rect.x + rect.width - ICON_SIZE - PADDING * 2
+    # Position at bottom-left
+    x = rect.x + PADDING * 2
     y = rect.y + rect.height - ICON_SIZE - PADDING * 2
 
     # Draw background circle

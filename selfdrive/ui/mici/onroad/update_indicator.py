@@ -58,13 +58,15 @@ class UpdateIndicator(Widget):
     btn_text_size = measure_text_cached(self._font, BTN_TEXT, BTN_FONT_SIZE)
     later_text_size = measure_text_cached(self._font, LATER_TEXT, BTN_FONT_SIZE)
 
-    # Position at bottom-left
-    x = rect.x + 16
+    # Position at bottom-right
     btn_h = BTN_FONT_SIZE + BTN_V_PAD * 2
+    btn_w = btn_text_size.x + BTN_H_PAD * 2
+    later_w = later_text_size.x + BTN_H_PAD * 2
+    total_w = btn_w + BTN_GAP + later_w
+    x = rect.x + rect.width - total_w - 16
     btn_y = rect.y + rect.height - btn_h - PADDING
 
     # Draw restart button
-    btn_w = btn_text_size.x + BTN_H_PAD * 2
     self._btn_rect = rl.Rectangle(x, btn_y, btn_w, btn_h)
 
     btn_color = BTN_COLOR_PRESSED if self._btn_pressed else BTN_COLOR
@@ -75,7 +77,6 @@ class UpdateIndicator(Widget):
     rl.draw_text_ex(self._font, BTN_TEXT, rl.Vector2(btn_text_x, btn_text_y), BTN_FONT_SIZE, 0, BTN_TEXT_COLOR)
 
     # Draw "Later" button right of restart
-    later_w = later_text_size.x + BTN_H_PAD * 2
     later_x = x + btn_w + BTN_GAP
     self._later_rect = rl.Rectangle(later_x, btn_y, later_w, btn_h)
 
