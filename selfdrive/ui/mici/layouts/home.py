@@ -89,6 +89,7 @@ class ForceOnroadIcon(Widget):
     self.set_rect(rl.Rectangle(0, 0, self.SIZE, self.SIZE))
     self.set_enabled(False)
     self._active = False
+    self._texture = gui_app.texture("icons_mici/wheel.png", 36, 36)
 
   def set_active(self, active: bool):
     self._active = active
@@ -96,17 +97,12 @@ class ForceOnroadIcon(Widget):
   def _render(self, _) -> None:
     cx = self._rect.x + self.SIZE / 2
     cy = self._rect.y + self.SIZE / 2
-    radius = 18
-    if self._active:
-      rl.draw_circle(int(cx), int(cy), radius, rl.Color(0, 200, 0, 220))
-    else:
-      rl.draw_circle(int(cx), int(cy), radius, rl.Color(80, 80, 80, 180))
-    rl.draw_ring(rl.Vector2(cx, cy), radius - 2, radius, 0, 360, 36, rl.Color(255, 255, 255, 100))
-    # Draw "R" for road
-    font_size = 22
-    text = "R"
-    tw = rl.measure_text(text, font_size)
-    rl.draw_text(text, int(cx - tw / 2), int(cy - font_size / 2), font_size, rl.Color(255, 255, 255, 230))
+    # Draw colored circle background
+    rl.draw_circle_v(rl.Vector2(cx, cy), 22, rl.Color(0, 200, 0, 220) if self._active else rl.Color(80, 80, 80, 180))
+    # Draw wheel icon centered
+    icon_x = self._rect.x + (self.SIZE - self._texture.width) / 2
+    icon_y = self._rect.y + (self.SIZE - self._texture.height) / 2
+    rl.draw_texture_ex(self._texture, rl.Vector2(icon_x, icon_y), 0.0, 1.0, rl.Color(255, 255, 255, 230))
 
 
 class MiciHomeLayout(Widget):
