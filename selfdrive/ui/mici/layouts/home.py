@@ -223,6 +223,7 @@ class MiciHomeLayout(Widget):
     ui_state.params.put_bool("UpdateAvailable", False)
     os.system("pkill -SIGHUP -f system.updated.updated")
     # Poll for update to complete (UpdateAvailable becomes True)
+    updater_seen_active = False
     for _ in range(600):  # up to 10 minutes
       time.sleep(1)
       if ui_state.params.get_bool("UpdateAvailable"):
@@ -231,6 +232,12 @@ class MiciHomeLayout(Widget):
         time.sleep(3)
         HARDWARE.reboot()
         return
+      updater_state = ui_state.params.get("UpdaterState") or ""
+      if updater_state != "idle":
+        updater_seen_active = True
+      elif updater_seen_active:
+        # Updater finished checking and returned to idle without finding an update
+        break
     # No update available - reset state
     self._update_in_progress = False
     self._update_icon.set_updating(False)
