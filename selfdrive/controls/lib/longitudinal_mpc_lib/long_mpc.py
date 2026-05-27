@@ -99,9 +99,9 @@ def get_stop_distance(personality=log.LongitudinalPersonality.standard):
 
 def get_obstacle_cost(personality=log.LongitudinalPersonality.standard):
   if personality==log.LongitudinalPersonality.traffic:
-    return 15.  # 4x standard: overcome weak gap-closure at low speed due to (v_ego+10) normalization
+    return 25.  # 4x standard: overcome weak gap-closure at low speed due to (v_ego+10) normalization
   elif personality==log.LongitudinalPersonality.aggressive:
-    return 10.  # Higher than default (3.0) so MPC brakes early and smoothly instead of late and hard
+    return 20.  # Higher than default (3.0) so MPC brakes early and smoothly instead of late and hard
   else:
     return X_EGO_OBSTACLE_COST
 
