@@ -80,6 +80,35 @@ class NetworkIcon(Widget):
     rl.draw_texture_ex(draw_net_txt, rl.Vector2(draw_x, draw_y), 0.0, 1.0, rl.Color(255, 255, 255, int(255 * 0.9)))
 
 
+class ForceOnroadIcon(Widget):
+  """Small icon indicator for force onroad state."""
+  SIZE = 48
+
+  def __init__(self):
+    super().__init__()
+    self.set_rect(rl.Rectangle(0, 0, self.SIZE, self.SIZE))
+    self.set_enabled(False)
+    self._active = False
+
+  def set_active(self, active: bool):
+    self._active = active
+
+  def _render(self, _) -> None:
+    cx = self._rect.x + self.SIZE / 2
+    cy = self._rect.y + self.SIZE / 2
+    radius = 18
+    if self._active:
+      rl.draw_circle(int(cx), int(cy), radius, rl.Color(0, 200, 0, 220))
+    else:
+      rl.draw_circle(int(cx), int(cy), radius, rl.Color(80, 80, 80, 180))
+    rl.draw_ring(rl.Vector2(cx, cy), radius - 2, radius, 0, 360, 36, rl.Color(255, 255, 255, 100))
+    # Draw "R" for road
+    font_size = 22
+    text = "R"
+    tw = rl.measure_text(text, font_size)
+    rl.draw_text(text, int(cx - tw / 2), int(cy - font_size / 2), font_size, rl.Color(255, 255, 255, 230))
+
+
 class MiciHomeLayout(Widget):
   def __init__(self):
     super().__init__()
@@ -92,13 +121,16 @@ class MiciHomeLayout(Widget):
 
     self._version_text = None
     self._experimental_mode = False
+    self._force_onroad = False
 
     self._experimental_icon = IconWidget("icons_mici/experimental_mode.png", (48, 48))
     self._mic_icon = IconWidget("icons_mici/microphone.png", (32, 46))
+    self._force_onroad_icon = ForceOnroadIcon()
 
     self._status_bar_layout = HBoxLayout([
       IconWidget("icons_mici/settings.png", (48, 48), opacity=0.9),
       NetworkIcon(),
+      self._force_onroad_icon,
       self._experimental_icon,
       self._mic_icon,
     ], spacing=18)
@@ -117,6 +149,7 @@ class MiciHomeLayout(Widget):
 
   def _update_params(self):
     self._experimental_mode = ui_state.params.get_bool("ExperimentalMode")
+    self._force_onroad = ui_state.params.get_bool("ForceOnroad")
 
   def _update_state(self):
     if self.is_pressed and not self._is_pressed_prev:
@@ -146,7 +179,11 @@ class MiciHomeLayout(Widget):
 
   def _handle_mouse_release(self, mouse_pos: MousePos):
     if not self._did_long_press:
-      if self._on_settings_click:
+      # Check if tap is on the force onroad icon
+      if rl.check_collision_point_rec(mouse_pos, self._force_onroad_icon.rect):
+        self._force_onroad = not self._force_onroad
+        ui_state.params.put_bool("ForceOnroad", self._force_onroad)
+      elif self._on_settings_click:
         self._on_settings_click()
     self._did_long_press = False
 
@@ -198,6 +235,7 @@ class MiciHomeLayout(Widget):
         self._version_commit_label.render()
 
     # ***** Center-aligned bottom section icons *****
+    self._force_onroad_icon.set_active(self._force_onroad)
     self._experimental_icon.set_visible(self._experimental_mode)
     self._mic_icon.set_visible(ui_state.recording_audio)
 

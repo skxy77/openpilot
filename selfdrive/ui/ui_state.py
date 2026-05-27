@@ -140,7 +140,7 @@ class UIState(UIStateSP):
       self.light_sensor = -1
 
     # Update started state
-    self.started = self.sm["deviceState"].started and self.ignition
+    self.started = (self.sm["deviceState"].started and self.ignition) or self.params.get_bool("ForceOnroad")
 
     # Update recording audio state
     self.recording_audio = self.params.get_bool("RecordAudio") and self.started
