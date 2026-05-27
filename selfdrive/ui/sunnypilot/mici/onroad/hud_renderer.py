@@ -73,6 +73,27 @@ class HudRendererSP(HudRenderer):
     text_y = box_y + (box_h - text_size.y) / 2
     rl.draw_text_ex(self._font_bold_sp, dist_text, rl.Vector2(text_x, text_y), LEAD_DIST_FONT_SIZE, 0, color)
 
+  def _draw_wheel_speed(self, rect: rl.Rectangle) -> None:
+    """Draw wheel speed below gap display, aligned to gap display width."""
+    speed = self.speed
+    unit = "km/h" if ui_state.is_metric else "mph"
+    speed_text = f"{speed:.0f}{unit}"
+
+    box_w = 180
+    box_h = 60
+    # Align directly below lead distance box (same x and width)
+    box_x = rect.x + rect.width - box_w - 10
+    box_y = rect.y + 10 + 60 + 10
+
+    bg_rect = rl.Rectangle(box_x, box_y, box_w, box_h)
+    rl.draw_rectangle_rounded(bg_rect, 0.3, 10, rl.Color(0, 0, 0, 166))
+
+    font_size = 36
+    text_size = measure_text_cached(self._font_bold_sp, speed_text, font_size)
+    text_x = box_x + (box_w - text_size.x) / 2
+    text_y = box_y + (box_h - text_size.y) / 2
+    rl.draw_text_ex(self._font_bold_sp, speed_text, rl.Vector2(text_x, text_y), font_size, 0, COLORS.WHITE)
+
   def _draw_driving_mode_bars(self, rect: rl.Rectangle) -> None:
     """Draw bars indicating driving mode: 1=traffic, 2=aggressive, 3=standard, 4=relaxed."""
     num_bars = ui_state.personality + 1
@@ -85,8 +106,8 @@ class HudRendererSP(HudRenderer):
     # Align right edge with the lead distance box (180px wide, 10px from right)
     lead_box_right = rect.x + rect.width - 10
     box_x = lead_box_right - bar_w
-    # Position below lead distance box (box_y=10, box_h=60, plus spacing)
-    box_y = rect.y + 10 + 60 + 10
+    # Position below wheel speed box (gap:10+60, spacing:10, speed:60, spacing:10)
+    box_y = rect.y + 10 + 60 + 10 + 60 + 10
 
     bg_rect = rl.Rectangle(box_x, box_y, bar_w, total_h + 10)
     rl.draw_rectangle_rounded(bg_rect, 0.3, 10, rl.Color(0, 0, 0, 166))
@@ -104,6 +125,7 @@ class HudRendererSP(HudRenderer):
     super()._render(rect)
     self.blind_spot_indicators.render(rect)
     self._draw_lead_distance(rect)
+    self._draw_wheel_speed(rect)
     self._draw_driving_mode_bars(rect)
 
   def _has_blind_spot_detected(self) -> bool:
