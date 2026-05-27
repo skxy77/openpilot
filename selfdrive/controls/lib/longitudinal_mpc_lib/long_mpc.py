@@ -66,9 +66,9 @@ def get_jerk_factor(personality=log.LongitudinalPersonality.standard):
   elif personality==log.LongitudinalPersonality.standard:
     return 1.0
   elif personality==log.LongitudinalPersonality.aggressive:
-    return 0.5
+    return 0.3
   elif personality==log.LongitudinalPersonality.traffic:
-    return 0.4
+    return 0.15
   else:
     raise NotImplementedError("Longitudinal personality not supported")
 
@@ -100,7 +100,8 @@ def get_stop_distance(personality=log.LongitudinalPersonality.standard):
 def get_obstacle_cost(personality=log.LongitudinalPersonality.standard):
   if personality==log.LongitudinalPersonality.traffic:
     return 15.  # 4x standard: overcome weak gap-closure at low speed due to (v_ego+10) normalization
-                # If gap still very big, can increase to 15 or 20 to be more aggressive about closing it.
+  elif personality==log.LongitudinalPersonality.aggressive:
+    return 10.  # Higher than default (3.0) so MPC brakes early and smoothly instead of late and hard
   else:
     return X_EGO_OBSTACLE_COST
 
