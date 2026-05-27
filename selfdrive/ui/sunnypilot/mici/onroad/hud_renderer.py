@@ -66,10 +66,38 @@ class HudRendererSP(HudRenderer):
     text_y = box_y + (box_h - text_size.y) / 2
     rl.draw_text_ex(self._font_bold_sp, dist_text, rl.Vector2(text_x, text_y), LEAD_DIST_FONT_SIZE, 0, color)
 
+  def _draw_driving_mode_bars(self, rect: rl.Rectangle) -> None:
+    """Draw bars indicating driving mode: 1=traffic, 2=aggressive, 3=standard, 4=relaxed."""
+    num_bars = ui_state.personality + 1
+    max_bars = 4
+
+    bar_w = 30
+    bar_h = 8
+    gap = 5
+    total_h = max_bars * bar_h + (max_bars - 1) * gap
+    # Align right edge with the lead distance box (180px wide, 10px from right)
+    lead_box_right = rect.x + rect.width - 10
+    box_x = lead_box_right - bar_w
+    # Position below lead distance box (box_y=10, box_h=60, plus spacing)
+    box_y = rect.y + 10 + 60 + 10
+
+    bg_rect = rl.Rectangle(box_x, box_y, bar_w, total_h + 10)
+    rl.draw_rectangle_rounded(bg_rect, 0.3, 10, rl.Color(0, 0, 0, 166))
+
+    for i in range(max_bars):
+      bar_x = box_x + 5
+      bar_y = box_y + 5 + i * (bar_h + gap)
+      if i < num_bars:
+        bar_color = rl.Color(255, 255, 255, 220)
+      else:
+        bar_color = rl.Color(255, 255, 255, 50)
+      rl.draw_rectangle_rounded(rl.Rectangle(bar_x, bar_y, bar_w - 10, bar_h), 0.5, 6, bar_color)
+
   def _render(self, rect: rl.Rectangle) -> None:
     super()._render(rect)
     self.blind_spot_indicators.render(rect)
     self._draw_lead_distance(rect)
+    self._draw_driving_mode_bars(rect)
 
   def _has_blind_spot_detected(self) -> bool:
 
