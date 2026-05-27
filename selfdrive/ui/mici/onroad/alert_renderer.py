@@ -132,6 +132,9 @@ class AlertRenderer(Widget, SpeedLimitAlertRenderer):
       # 1. Never received selfdriveState since going onroad
       waiting_for_startup = recv_frame < ui_state.started_frame
       if waiting_for_startup and time_since_onroad > 5:
+        # Don't show unavailable alert when force onroad is active
+        if ui_state.params.get_bool("ForceOnroad"):
+          return None
         return ALERT_STARTUP_PENDING
 
       # 2. Lost communication with selfdriveState after receiving it
