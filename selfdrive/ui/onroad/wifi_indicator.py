@@ -40,9 +40,9 @@ class WifiIndicator(Widget):
     if not (self._is_wifi and self._has_internet):
       return
 
-    # Position at bottom-left
-    x = rect.x + PADDING * 2
-    y = rect.y + rect.height - ICON_SIZE - PADDING * 2
+    # Position at bottom-left, matching DMoji edge padding
+    x = rect.x + 16
+    y = rect.y + rect.height - ICON_SIZE - 16
 
     # Draw background circle
     center_x = x + ICON_SIZE / 2

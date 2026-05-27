@@ -55,8 +55,8 @@ class HudRendererSP(HudRenderer):
 
     box_w = 180
     box_h = 60
-    box_x = rect.x + rect.width - box_w - 20
-    box_y = rect.y + 20
+    box_x = rect.x + rect.width - box_w - 16
+    box_y = rect.y + 10
 
     bg_rect = rl.Rectangle(box_x, box_y, box_w, box_h)
     rl.draw_rectangle_rounded(bg_rect, 0.3, 10, rl.Color(0, 0, 0, 166))
