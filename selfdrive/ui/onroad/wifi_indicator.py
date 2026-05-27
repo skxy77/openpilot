@@ -41,8 +41,8 @@ class WifiIndicator(Widget):
       return
 
     # Position at bottom-left, matching DMoji edge padding
-    x = rect.x + 16
-    y = rect.y + rect.height - ICON_SIZE - 16
+    x = rect.x + 10
+    y = rect.y + rect.height - ICON_SIZE - 10
 
     # Draw background circle
     center_x = x + ICON_SIZE / 2
