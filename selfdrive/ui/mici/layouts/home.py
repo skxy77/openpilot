@@ -92,20 +92,14 @@ class ForceOnroadIcon(Widget):
     self.set_rect(rl.Rectangle(0, 0, self.SIZE, self.SIZE))
     self.set_enabled(False)
     self._active = False
-    self._texture = gui_app.texture("icons_mici/wheel.png", 36, 36)
+    self._texture = gui_app.texture("icons_mici/wheel.png", 48, 48)
 
   def set_active(self, active: bool):
     self._active = active
 
   def _render(self, _) -> None:
-    cx = self._rect.x + self.SIZE / 2
-    cy = self._rect.y + self.SIZE / 2
-    # Draw colored circle background
-    rl.draw_circle_v(rl.Vector2(cx, cy), 22, rl.Color(0, 200, 0, 220) if self._active else rl.Color(80, 80, 80, 180))
-    # Draw wheel icon centered
-    icon_x = self._rect.x + (self.SIZE - self._texture.width) / 2
-    icon_y = self._rect.y + (self.SIZE - self._texture.height) / 2
-    rl.draw_texture_ex(self._texture, rl.Vector2(icon_x, icon_y), 0.0, 1.0, rl.Color(255, 255, 255, 230))
+    color = rl.Color(0, 220, 0, 230) if self._active else rl.Color(150, 150, 150, 120)
+    rl.draw_texture_ex(self._texture, rl.Vector2(self._rect.x, self._rect.y), 0.0, 1.0, color)
 
 
 class UpdateIcon(Widget):
@@ -117,7 +111,7 @@ class UpdateIcon(Widget):
     self.set_rect(rl.Rectangle(0, 0, self.SIZE, self.SIZE))
     self.set_enabled(False)
     self._updating = False
-    self._texture = gui_app.texture("icons_mici/exclamation_point.png", 36, 36)
+    self._texture = gui_app.texture("icons_mici/exclamation_point.png", 9, 44)
 
   @property
   def updating(self) -> bool:
@@ -127,18 +121,15 @@ class UpdateIcon(Widget):
     self._updating = updating
 
   def _render(self, _) -> None:
-    cx = self._rect.x + self.SIZE / 2
-    cy = self._rect.y + self.SIZE / 2
-    if self._updating:
-      # Pulsing blue while updating
-      alpha = int(150 + 70 * abs(((rl.get_time() * 2) % 2) - 1))
-      rl.draw_circle_v(rl.Vector2(cx, cy), 22, rl.Color(30, 120, 255, alpha))
-    else:
-      rl.draw_circle_v(rl.Vector2(cx, cy), 22, rl.Color(200, 160, 0, 200))
-    # Draw icon centered
+    # Draw icon centered with color tint to indicate state
     icon_x = self._rect.x + (self.SIZE - self._texture.width) / 2
     icon_y = self._rect.y + (self.SIZE - self._texture.height) / 2
-    rl.draw_texture_ex(self._texture, rl.Vector2(icon_x, icon_y), 0.0, 1.0, rl.Color(255, 255, 255, 230))
+    if self._updating:
+      alpha = int(150 + 70 * abs(((rl.get_time() * 2) % 2) - 1))
+      color = rl.Color(100, 180, 255, alpha)
+    else:
+      color = rl.Color(255, 200, 0, 230)
+    rl.draw_texture_ex(self._texture, rl.Vector2(icon_x, icon_y), 0.0, 1.0, color)
 
 
 class MiciHomeLayout(Widget):
