@@ -322,6 +322,11 @@ def hardware_thread(end_event, hw_queue) -> None:
     startup_conditions["not_always_offroad"] = not offroad_mode
     onroad_conditions["not_always_offroad"] = not offroad_mode
 
+    # user-forced onroad: override ignition to start all services
+    force_onroad = params.get_bool("ForceOnroad")
+    if force_onroad:
+      onroad_conditions["ignition"] = True
+
     # if an unsupported device and branch is detected, going onroad is blocked
     # only allow going onroad when:
     # - TIZI, or
