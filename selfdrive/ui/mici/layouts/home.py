@@ -111,7 +111,7 @@ class UpdateIcon(Widget):
     self.set_rect(rl.Rectangle(0, 0, self.SIZE, self.SIZE))
     self.set_enabled(False)
     self._updating = False
-    self._texture = gui_app.texture("icons_mici/exclamation_point.png", 9, 44)
+    self._texture = gui_app.texture("icons_mici/settings/device/update.png", 48, 48)
 
   @property
   def updating(self) -> bool:
