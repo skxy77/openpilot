@@ -237,6 +237,10 @@ def hardware_thread(end_event, hw_queue) -> None:
         onroad_conditions["ignition"] = False
         cloudlog.error("panda timed out onroad")
 
+    # user-forced onroad: override ignition before the 2Hz gate
+    if params.get_bool("ForceOnroad"):
+      onroad_conditions["ignition"] = True
+
     # Run at 2Hz, plus either edge of ignition
     ign_edge = (started_ts is not None) != all(onroad_conditions.values())
     if (sm.frame % round(SERVICE_LIST['pandaStates'].frequency * DT_HW) != 0) and not ign_edge:
@@ -321,11 +325,6 @@ def hardware_thread(end_event, hw_queue) -> None:
     offroad_mode = params.get_bool("OffroadMode")
     startup_conditions["not_always_offroad"] = not offroad_mode
     onroad_conditions["not_always_offroad"] = not offroad_mode
-
-    # user-forced onroad: override ignition to start all services
-    force_onroad = params.get_bool("ForceOnroad")
-    if force_onroad:
-      onroad_conditions["ignition"] = True
 
     # if an unsupported device and branch is detected, going onroad is blocked
     # only allow going onroad when:
