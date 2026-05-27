@@ -1,5 +1,7 @@
 import datetime
+import os
 import time
+import threading
 
 from cereal import log
 import pyray as rl
@@ -10,6 +12,7 @@ from openpilot.system.ui.widgets.icon_widget import IconWidget
 from openpilot.system.ui.widgets.label import UnifiedLabel
 from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos
 from openpilot.selfdrive.ui.ui_state import ui_state
+from openpilot.system.hardware import HARDWARE
 from openpilot.system.version import RELEASE_BRANCHES
 
 HEAD_BUTTON_FONT_SIZE = 40
@@ -105,6 +108,39 @@ class ForceOnroadIcon(Widget):
     rl.draw_texture_ex(self._texture, rl.Vector2(icon_x, icon_y), 0.0, 1.0, rl.Color(255, 255, 255, 230))
 
 
+class UpdateIcon(Widget):
+  """Small icon button to trigger update download + auto-reboot."""
+  SIZE = 48
+
+  def __init__(self):
+    super().__init__()
+    self.set_rect(rl.Rectangle(0, 0, self.SIZE, self.SIZE))
+    self.set_enabled(False)
+    self._updating = False
+    self._texture = gui_app.texture("icons_mici/exclamation_point.png", 36, 36)
+
+  @property
+  def updating(self) -> bool:
+    return self._updating
+
+  def set_updating(self, updating: bool):
+    self._updating = updating
+
+  def _render(self, _) -> None:
+    cx = self._rect.x + self.SIZE / 2
+    cy = self._rect.y + self.SIZE / 2
+    if self._updating:
+      # Pulsing blue while updating
+      alpha = int(150 + 70 * abs(((rl.get_time() * 2) % 2) - 1))
+      rl.draw_circle_v(rl.Vector2(cx, cy), 22, rl.Color(30, 120, 255, alpha))
+    else:
+      rl.draw_circle_v(rl.Vector2(cx, cy), 22, rl.Color(200, 160, 0, 200))
+    # Draw icon centered
+    icon_x = self._rect.x + (self.SIZE - self._texture.width) / 2
+    icon_y = self._rect.y + (self.SIZE - self._texture.height) / 2
+    rl.draw_texture_ex(self._texture, rl.Vector2(icon_x, icon_y), 0.0, 1.0, rl.Color(255, 255, 255, 230))
+
+
 class MiciHomeLayout(Widget):
   def __init__(self):
     super().__init__()
@@ -118,15 +154,18 @@ class MiciHomeLayout(Widget):
     self._version_text = None
     self._experimental_mode = False
     self._force_onroad = False
+    self._update_in_progress = False
 
     self._experimental_icon = IconWidget("icons_mici/experimental_mode.png", (48, 48))
     self._mic_icon = IconWidget("icons_mici/microphone.png", (32, 46))
     self._force_onroad_icon = ForceOnroadIcon()
+    self._update_icon = UpdateIcon()
 
     self._status_bar_layout = HBoxLayout([
       IconWidget("icons_mici/settings.png", (48, 48), opacity=0.9),
       NetworkIcon(),
       self._force_onroad_icon,
+      self._update_icon,
       self._experimental_icon,
       self._mic_icon,
     ], spacing=18)
@@ -179,9 +218,27 @@ class MiciHomeLayout(Widget):
       if rl.check_collision_point_rec(mouse_pos, self._force_onroad_icon.rect):
         self._force_onroad = not self._force_onroad
         ui_state.params.put_bool("ForceOnroad", self._force_onroad)
+      elif rl.check_collision_point_rec(mouse_pos, self._update_icon.rect) and not self._update_in_progress:
+        self._update_in_progress = True
+        self._update_icon.set_updating(True)
+        threading.Thread(target=self._trigger_update_and_reboot, daemon=True).start()
       elif self._on_settings_click:
         self._on_settings_click()
     self._did_long_press = False
+
+  def _trigger_update_and_reboot(self):
+    """Signal updated to fetch, wait for UpdateAvailable, then reboot."""
+    os.system("pkill -SIGHUP -f system.updated.updated")
+    # Poll for update to complete (UpdateAvailable becomes True)
+    for _ in range(600):  # up to 10 minutes
+      time.sleep(1)
+      if ui_state.params.get_bool("UpdateAvailable"):
+        time.sleep(2)
+        HARDWARE.reboot()
+        return
+    # Timeout - reset state
+    self._update_in_progress = False
+    self._update_icon.set_updating(False)
 
   def _get_version_text(self) -> tuple[str, str, str, str] | None:
     version = ui_state.params.get("Version")
