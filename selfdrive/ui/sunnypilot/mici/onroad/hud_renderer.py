@@ -6,6 +6,7 @@ See the LICENSE.md file in the root directory for more details.
 """
 import pyray as rl
 
+from cereal import log
 from openpilot.selfdrive.ui.mici.onroad.hud_renderer import HudRenderer, COLORS
 from openpilot.selfdrive.ui.sunnypilot.onroad.blind_spot_indicators import BlindSpotIndicators
 from openpilot.selfdrive.ui.ui_state import ui_state
@@ -13,6 +14,7 @@ from openpilot.system.ui.lib.application import gui_app, FontWeight
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 
 LEAD_DIST_FONT_SIZE = 50
+PERSONALITY_TO_INT = log.LongitudinalPersonality.schema.enumerants
 
 
 class HudRendererSP(HudRenderer):
@@ -26,6 +28,9 @@ class HudRendererSP(HudRenderer):
   def _update_state(self) -> None:
     super()._update_state()
     self.blind_spot_indicators.update()
+
+    if ui_state.sm.updated.get('selfdriveState', False):
+      ui_state.personality = PERSONALITY_TO_INT[ui_state.sm['selfdriveState'].personality]
 
     if ui_state.sm.recv_frame.get('radarState', 0) > 0:
       lead_one = ui_state.sm['radarState'].leadOne
