@@ -218,13 +218,15 @@ class MiciHomeLayout(Widget):
     self._did_long_press = False
 
   def _trigger_update_and_reboot(self):
-    """Signal updated to fetch, wait for UpdateAvailable, then reboot."""
+    """Signal updated to fetch, wait for UpdateAvailable, then switch offroad and reboot."""
     os.system("pkill -SIGHUP -f system.updated.updated")
     # Poll for update to complete (UpdateAvailable becomes True)
     for _ in range(600):  # up to 10 minutes
       time.sleep(1)
       if ui_state.params.get_bool("UpdateAvailable"):
-        time.sleep(2)
+        # Switch to offroad mode and wait before rebooting
+        ui_state.params.put_bool("OffroadMode", True)
+        time.sleep(3)
         HARDWARE.reboot()
         return
     # Timeout - reset state
