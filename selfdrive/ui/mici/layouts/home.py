@@ -219,6 +219,8 @@ class MiciHomeLayout(Widget):
 
   def _trigger_update_and_reboot(self):
     """Signal updated to fetch, wait for UpdateAvailable, then switch offroad and reboot."""
+    # Clear stale update state so we only reboot on a fresh update confirmation
+    ui_state.params.put_bool("UpdateAvailable", False)
     os.system("pkill -SIGHUP -f system.updated.updated")
     # Poll for update to complete (UpdateAvailable becomes True)
     for _ in range(600):  # up to 10 minutes
@@ -229,7 +231,7 @@ class MiciHomeLayout(Widget):
         time.sleep(3)
         HARDWARE.reboot()
         return
-    # Timeout - reset state
+    # No update available - reset state
     self._update_in_progress = False
     self._update_icon.set_updating(False)
 
