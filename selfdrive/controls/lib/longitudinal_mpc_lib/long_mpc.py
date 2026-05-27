@@ -366,9 +366,9 @@ class LongitudinalMpc:
     lead_1_speed_scale = np.clip(1.0 - lead_xv_1[:,1] / 10.0, 0.0, 1.0)
 
     # Compensate for weak gap-closure cost at low ego speeds due to /(v_ego+10) normalization.
-    # Adds offset to obstacle so solver thinks target is already reached, preventing 4m stop gap.
+    # Adds offset to obstacle so solver thinks target is already reached, preventing large stop gap.
     # Only active for traffic mode; scales from full effect at standstill to zero at 20 km/h.
-    LOW_SPEED_PROXIMITY = 3.5 if personality == log.LongitudinalPersonality.traffic else 0.0
+    LOW_SPEED_PROXIMITY = 8.5 if personality == log.LongitudinalPersonality.traffic else 0.0
     low_speed_factor = np.clip(1.0 - v_ego / 5.56, 0.0, 1.0)  # fades to 0 by 20 km/h
     low_speed_proximity_offset = LOW_SPEED_PROXIMITY * low_speed_factor
 
