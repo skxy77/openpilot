@@ -44,8 +44,8 @@ class WifiIndicator(Widget):
     # The background circle extends beyond the icon bounds, so offset to compensate
     bg_radius = ICON_SIZE * 0.7
     bg_overhang = bg_radius - ICON_SIZE / 2
-    x = rect.x + 16 + bg_overhang
-    y = rect.y + rect.height - ICON_SIZE - 16 - bg_overhang
+    x = rect.x + 10 + bg_overhang
+    y = rect.y + rect.height - ICON_SIZE - 10 - bg_overhang
 
     # Draw background circle
     center_x = x + ICON_SIZE / 2
