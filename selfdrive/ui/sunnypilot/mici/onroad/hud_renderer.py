@@ -29,8 +29,10 @@ class HudRendererSP(HudRenderer):
     super()._update_state()
     self.blind_spot_indicators.update()
 
-    if ui_state.started:
+    if ui_state.started and ui_state.sm.recv_frame.get('selfdriveState', 0) > 0:
       ui_state.personality = PERSONALITY_TO_INT[ui_state.sm['selfdriveState'].personality]
+    else:
+      ui_state.personality = ui_state.params.get("LongitudinalPersonality", return_default=True)
 
     if ui_state.sm.recv_frame.get('radarState', 0) > 0:
       lead_one = ui_state.sm['radarState'].leadOne
