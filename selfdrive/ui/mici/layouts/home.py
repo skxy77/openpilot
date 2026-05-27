@@ -98,7 +98,7 @@ class ForceOnroadIcon(Widget):
     self._active = active
 
   def _render(self, _) -> None:
-    color = rl.Color(0, 220, 0, 230) if self._active else rl.Color(150, 150, 150, 120)
+    color = rl.Color(0, 220, 0, 230) if self._active else rl.Color(255, 255, 255, 230)
     rl.draw_texture_ex(self._texture, rl.Vector2(self._rect.x, self._rect.y), 0.0, 1.0, color)
 
 
@@ -128,7 +128,7 @@ class UpdateIcon(Widget):
       alpha = int(150 + 70 * abs(((rl.get_time() * 2) % 2) - 1))
       color = rl.Color(100, 180, 255, alpha)
     else:
-      color = rl.Color(255, 200, 0, 230)
+      color = rl.Color(255, 255, 255, 230)
     rl.draw_texture_ex(self._texture, rl.Vector2(icon_x, icon_y), 0.0, 1.0, color)
 
 
