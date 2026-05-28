@@ -373,8 +373,21 @@ class LongitudinalMpc:
     low_speed_factor = np.clip(1.0 - v_ego / 5.56, 0.0, 1.0)  # fades to 0 by 20 km/h
     low_speed_proximity_offset = LOW_SPEED_PROXIMITY * low_speed_factor
 
-    lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1]) + stop_distance_offset * lead_0_speed_scale + low_speed_proximity_offset
-    lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1]) + stop_distance_offset * lead_1_speed_scale + low_speed_proximity_offset
+    # In traffic mode, compensate for the ego's braking distance term in desired_dist_comfort.
+    # When lead is slower than ego, get_stopped_equivalence_factor(v_lead) doesn't cancel the ego's
+    # v_ego^2/(2*COMFORT_BRAKE) term, causing MPC to decelerate too early and maintain huge gaps.
+    # This offset shifts the obstacle forward proportional to ego's braking distance, scaled by
+    # how much slower the lead is. Prevents cars from cutting in due to large gaps in traffic.
+    TRAFFIC_APPROACH_FACTOR = 0.5
+    if personality == log.LongitudinalPersonality.traffic:
+      approach_compensation_0 = TRAFFIC_APPROACH_FACTOR * (v_ego**2) / (2 * COMFORT_BRAKE) * lead_0_speed_scale
+      approach_compensation_1 = TRAFFIC_APPROACH_FACTOR * (v_ego**2) / (2 * COMFORT_BRAKE) * lead_1_speed_scale
+    else:
+      approach_compensation_0 = 0.0
+      approach_compensation_1 = 0.0
+
+    lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1]) + stop_distance_offset * lead_0_speed_scale + low_speed_proximity_offset + approach_compensation_0
+    lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1]) + stop_distance_offset * lead_1_speed_scale + low_speed_proximity_offset + approach_compensation_1
 
     # When a lead disappears, gradually fade out the last known obstacle over LEAD_LOST_FADE_TIME
     # to prevent instant acceleration (which causes sudden braking when a new lead is detected)
