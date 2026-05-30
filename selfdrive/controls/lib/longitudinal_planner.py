@@ -15,7 +15,6 @@ from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N, get_accel_
 from openpilot.selfdrive.car.cruise import V_CRUISE_MAX, V_CRUISE_UNSET
 from cereal import log
 
-TRAFFIC_MODE_MAX_SPEED = 40. * CV.KPH_TO_MS  # 40 km/h
 from openpilot.common.swaglog import cloudlog
 
 from openpilot.sunnypilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlannerSP
@@ -139,10 +138,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     if force_slow_decel:
       v_cruise = 0.0
 
-    # Traffic mode only active below 40 km/h, fall back to aggressive above that
     personality = sm['selfdriveState'].personality
-    if personality == log.LongitudinalPersonality.traffic and v_ego > TRAFFIC_MODE_MAX_SPEED:
-      personality = log.LongitudinalPersonality.aggressive
 
     self.mpc.set_weights(prev_accel_constraint, personality=personality)
     self.mpc.set_cur_state(self.v_desired_filter.x, self.a_desired)
