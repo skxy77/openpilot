@@ -165,8 +165,14 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     v_ego_stopping = 0.05 if personality == log.LongitudinalPersonality.traffic else self.CP.vEgoStopping
     output_a_target_mpc, output_should_stop_mpc = get_accel_from_plan(self.v_desired_trajectory, self.a_desired_trajectory, CONTROL_N_T_IDX,
                                                                         action_t=action_t, vEgoStopping=v_ego_stopping)
-    if personality == log.LongitudinalPersonality.traffic and v_ego > 0.5:
-      output_should_stop_mpc = False
+    # In traffic mode, prevent stopping state when lead is still far (> 2m).
+    # This fixes two issues: (1) premature stop during approach at low speed, and
+    # (2) stopping-state deadlock at standstill where MPC can't plan v > 0.05 within
+    # action_t (~150ms), locking the car at 4-5m gap forever.
+    if personality == log.LongitudinalPersonality.traffic and output_should_stop_mpc:
+      lead = sm['radarState'].leadOne
+      if lead.status and lead.dRel > 2.0:
+        output_should_stop_mpc = False
     output_a_target_e2e = sm['modelV2'].action.desiredAcceleration
     output_should_stop_e2e = sm['modelV2'].action.shouldStop
 
