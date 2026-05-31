@@ -133,8 +133,6 @@ class SelfdriveD(CruiseHelper):
     self.logged_comm_issue = None
     self.not_running_prev = None
     self.experimental_mode = False
-    self.has_longitudinal_control = self.CP.openpilotLongitudinalControl or \
-      (self.CP.alphaLongitudinalAvailable and self.params.get_bool("AlphaLongitudinalEnabled"))
     self.personality = get_sanitize_int_param(
       "LongitudinalPersonality",
       min(log.LongitudinalPersonality.schema.enumerants.values()),
@@ -453,13 +451,14 @@ class SelfdriveD(CruiseHelper):
     CruiseHelper.update(self, CS, self.events_sp, self.experimental_mode)
 
     # decrement personality on distance button press
-    if any(not be.pressed and be.type == ButtonType.gapAdjustCruise for be in CS.buttonEvents):
-      if not self.experimental_mode_switched:
-        personality_cycle = {0: 1, 1: 2, 2: 3, 3: 0}  # traffic→aggressive→standard→relaxed→traffic
-        self.personality = personality_cycle.get(self.personality, 2)
-        self.params.put_nonblocking('LongitudinalPersonality', self.personality)
-        self.events.add(EventName.personalityChanged)
-      self.experimental_mode_switched = False
+    if self.CP.openpilotLongitudinalControl:
+      if any(not be.pressed and be.type == ButtonType.gapAdjustCruise for be in CS.buttonEvents):
+        if not self.experimental_mode_switched:
+          personality_cycle = {0: 1, 1: 2, 2: 3, 3: 0}  # traffic→aggressive→standard→relaxed→traffic
+          self.personality = personality_cycle.get(self.personality, 2)
+          self.params.put_nonblocking('LongitudinalPersonality', self.personality)
+          self.events.add(EventName.personalityChanged)
+        self.experimental_mode_switched = False
 
 
 
@@ -603,8 +602,6 @@ class SelfdriveD(CruiseHelper):
       self.is_ldw_enabled = self.params.get_bool("IsLdwEnabled")
       self.disengage_on_accelerator = self.params.get_bool("DisengageOnAccelerator")
       self.experimental_mode = self.params.get_bool("ExperimentalMode") and self.CP.openpilotLongitudinalControl
-      self.has_longitudinal_control = self.CP.openpilotLongitudinalControl or \
-        (self.CP.alphaLongitudinalAvailable and self.params.get_bool("AlphaLongitudinalEnabled"))
       self.personality = self.params.get("LongitudinalPersonality", return_default=True)
 
       self.mads.read_params()
