@@ -311,7 +311,11 @@ class LongitudinalMpc:
     jerk_factor = get_jerk_factor(personality)
     obstacle_cost = get_obstacle_cost(personality)
     a_change_cost = A_CHANGE_COST if prev_accel_constraint else 0
-    cost_weights = [obstacle_cost, X_EGO_COST, V_EGO_COST, A_EGO_COST, jerk_factor * a_change_cost, jerk_factor * J_EGO_COST]
+    # For traffic mode, decouple a_change from jerk_factor: use a lower multiplier
+    # so the car responds faster when the lead pulls away, without making jerk harsh.
+    # jerk_factor (0.15) still controls J_EGO_COST for smooth jerk.
+    a_change_multiplier = 0.05 if personality == log.LongitudinalPersonality.traffic else jerk_factor
+    cost_weights = [obstacle_cost, X_EGO_COST, V_EGO_COST, A_EGO_COST, a_change_multiplier * a_change_cost, jerk_factor * J_EGO_COST]
     constraint_cost_weights = [LIMIT_COST, LIMIT_COST, LIMIT_COST, DANGER_ZONE_COST]
     self.set_cost_weights(cost_weights, constraint_cost_weights)
 
