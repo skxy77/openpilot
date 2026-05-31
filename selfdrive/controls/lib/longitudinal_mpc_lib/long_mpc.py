@@ -60,6 +60,11 @@ CRUISE_MAX_ACCEL = 1.0
 MIN_X_LEAD_FACTOR = 0.5
 LEAD_LOST_FADE_TIME = 3.0  # seconds to fade out last known lead obstacle after lead disappears
 
+# Traffic mode: target same-speed following gaps (lookup table)
+# Speed breakpoints in m/s: [0, 5, 10, 15, 20, 30, 40, 50, 60, 80, 100, 130, 150, 180] km/h
+TRAFFIC_GAP_BP = [0., 1.39, 2.78, 4.17, 5.56, 8.33, 11.11, 13.89, 16.67, 22.22, 27.78, 36.11, 41.67, 50.0]
+TRAFFIC_GAP_V  = [2.5, 3.0,  5.0,  6.0,  7.0,  8.0,  10.0,  13.0,  16.0,  22.0,  28.0,  36.0, 41.7, 50.0]
+
 def get_jerk_factor(personality=log.LongitudinalPersonality.standard):
   if personality==log.LongitudinalPersonality.relaxed:
     return 1.0
@@ -360,34 +365,39 @@ class LongitudinalMpc:
     # To estimate a safe distance from a moving lead, we calculate how much stopping
     # distance that lead needs as a minimum. We can add that to the current distance
     # and then treat that as a stopped car/obstacle at this new distance.
-    # Offset to allow personality-specific stop distances (solver hardcodes standard 6.0m).
-    # Scaled by lead speed: full effect when stopped, fades out by 10 m/s so driving gap is unchanged.
-    stop_distance_offset = get_stop_distance(log.LongitudinalPersonality.standard) - get_stop_distance(personality)
     lead_0_speed_scale = np.clip(1.0 - lead_xv_0[:,1] / 10.0, 0.0, 1.0)
     lead_1_speed_scale = np.clip(1.0 - lead_xv_1[:,1] / 10.0, 0.0, 1.0)
 
-    # Compensate for weak gap-closure cost at low ego speeds due to /(v_ego+10) normalization.
-    # Adds offset to obstacle so solver thinks target is already reached, preventing large stop gap.
-    # Only active for traffic mode; scales from full effect at standstill to zero at 20 km/h.
-    LOW_SPEED_PROXIMITY = 8.5 if personality == log.LongitudinalPersonality.traffic else 0.0
-    low_speed_factor = np.clip(1.0 - v_ego / 5.56, 0.0, 1.0)  # fades to 0 by 20 km/h
-    low_speed_proximity_offset = LOW_SPEED_PROXIMITY * low_speed_factor
-
-    # In traffic mode, compensate for the ego's braking distance term in desired_dist_comfort.
-    # When lead is slower than ego, get_stopped_equivalence_factor(v_lead) doesn't cancel the ego's
-    # v_ego^2/(2*COMFORT_BRAKE) term, causing MPC to decelerate too early and maintain huge gaps.
-    # This offset shifts the obstacle forward proportional to ego's braking distance, scaled by
-    # how much slower the lead is. Prevents cars from cutting in due to large gaps in traffic.
-    TRAFFIC_APPROACH_FACTOR = 0.5
     if personality == log.LongitudinalPersonality.traffic:
-      approach_compensation_0 = TRAFFIC_APPROACH_FACTOR * (v_ego**2) / (2 * COMFORT_BRAKE) * lead_0_speed_scale
-      approach_compensation_1 = TRAFFIC_APPROACH_FACTOR * (v_ego**2) / (2 * COMFORT_BRAKE) * lead_1_speed_scale
-    else:
-      approach_compensation_0 = 0.0
-      approach_compensation_1 = 0.0
+      # Traffic mode: use per-node target gap lookup for precise gap control.
+      # Use previous solve's v_solution to predict ego speed at each MPC node,
+      # so the solver can plan the full trajectory (especially approach-to-stop).
+      v_predicted = np.clip(self.v_solution, 0.0, 100.0)
+      if np.all(v_predicted == 0):
+        v_predicted = np.full(N+1, v_ego)  # first iteration fallback
 
-    lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1]) + stop_distance_offset * lead_0_speed_scale + low_speed_proximity_offset + approach_compensation_0
-    lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1]) + stop_distance_offset * lead_1_speed_scale + low_speed_proximity_offset + approach_compensation_1
+      # Compute per-node target offset: positive = push closer, negative = push further
+      target_gap_traj = np.interp(v_predicted, TRAFFIC_GAP_BP, TRAFFIC_GAP_V)
+      solver_default_gap = t_follow * v_predicted + get_stop_distance(log.LongitudinalPersonality.standard)
+      target_offset_traj = solver_default_gap - target_gap_traj
+
+      # Gate negative offsets (gap-increasing) by lead speed similarity.
+      # When lead is stopped/slow, don't push obstacle backward (would delay braking).
+      # When lead is at similar speed (lead_speed_scale=0), apply full negative offset.
+      traffic_offset_0 = np.where(target_offset_traj >= 0,
+                                  target_offset_traj,
+                                  target_offset_traj * (1.0 - lead_0_speed_scale))
+      traffic_offset_1 = np.where(target_offset_traj >= 0,
+                                  target_offset_traj,
+                                  target_offset_traj * (1.0 - lead_1_speed_scale))
+
+      lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1]) + traffic_offset_0
+      lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1]) + traffic_offset_1
+    else:
+      # Other personalities: standard stop_distance offset scaled by lead speed
+      stop_distance_offset = get_stop_distance(log.LongitudinalPersonality.standard) - get_stop_distance(personality)
+      lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1]) + stop_distance_offset * lead_0_speed_scale
+      lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1]) + stop_distance_offset * lead_1_speed_scale
 
     # When a lead disappears, gradually fade out the last known obstacle over LEAD_LOST_FADE_TIME
     # to prevent instant acceleration (which causes sudden braking when a new lead is detected)
