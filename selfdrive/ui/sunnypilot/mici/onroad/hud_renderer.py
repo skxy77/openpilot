@@ -126,7 +126,6 @@ class HudRendererSP(HudRenderer):
     self.blind_spot_indicators.render(rect)
     self._draw_lead_distance(rect)
     self._draw_wheel_speed(rect)
-    self._draw_driving_mode_bars(rect)
 
   def _has_blind_spot_detected(self) -> bool:
 
