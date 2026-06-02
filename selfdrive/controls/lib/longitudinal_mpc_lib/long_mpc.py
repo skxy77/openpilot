@@ -63,7 +63,7 @@ LEAD_LOST_FADE_TIME = 3.0  # seconds to fade out last known lead obstacle after 
 # Traffic mode: target same-speed following gaps (lookup table)
 # Speed breakpoints in m/s: [0, 5, 10, 15, 20, 30, 40, 50, 60, 80, 100, 130, 150, 180] km/h
 TRAFFIC_GAP_BP = [0., 1.39, 2.78, 4.17, 5.56, 8.33, 11.11, 13.89, 16.67, 22.22, 27.78, 36.11, 41.67, 50.0]
-TRAFFIC_GAP_V  = [2.5, 3.0,  5.0,  6.0,  7.0,  8.0,  10.0,  13.0,  16.0,  22.0,  28.0,  36.0, 41.7, 50.0]
+TRAFFIC_GAP_V  = [2.0, 2.0,  3.0,  5.0,  7.0,  8.0,  10.0,  13.0,  16.0,  22.0,  28.0,  36.0, 41.7, 50.0]
 
 def get_jerk_factor(personality=log.LongitudinalPersonality.standard):
   if personality==log.LongitudinalPersonality.relaxed:

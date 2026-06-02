@@ -171,7 +171,7 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
     # action_t (~150ms), locking the car at 4-5m gap forever.
     if personality == log.LongitudinalPersonality.traffic and output_should_stop_mpc:
       lead = sm['radarState'].leadOne
-      if lead.status and lead.dRel > 2.0:
+      if lead.status and lead.dRel > 1.5:
         output_should_stop_mpc = False
     output_a_target_e2e = sm['modelV2'].action.desiredAcceleration
     output_should_stop_e2e = sm['modelV2'].action.shouldStop
