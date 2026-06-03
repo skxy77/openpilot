@@ -59,6 +59,7 @@ CRUISE_MIN_ACCEL = -1.2
 CRUISE_MAX_ACCEL = 1.0
 MIN_X_LEAD_FACTOR = 0.5
 LEAD_LOST_FADE_TIME = 3.0  # seconds to fade out last known lead obstacle after lead disappears
+TRAFFIC_LEAD_TAU_FACTOR = 0.3  # In traffic mode, reduce a_lead_tau so MPC predicts lead acceleration persisting longer
 
 # Traffic mode: target same-speed following gaps (lookup table)
 # Speed breakpoints in m/s: [0, 5, 10, 15, 20, 30, 40, 50, 60, 80, 100, 130, 150, 180] km/h
@@ -335,7 +336,7 @@ class LongitudinalMpc:
     lead_xv = np.column_stack((x_lead_traj, v_lead_traj))
     return lead_xv
 
-  def process_lead(self, lead):
+  def process_lead(self, lead, personality=log.LongitudinalPersonality.standard):
     v_ego = self.x0[1]
     if lead is not None and lead.status:
       x_lead = lead.dRel
@@ -348,6 +349,12 @@ class LongitudinalMpc:
       v_lead = v_ego + 10.0
       a_lead = 0.0
       a_lead_tau = _LEAD_ACCEL_TAU
+
+    # In traffic mode, reduce tau so the MPC predicts lead acceleration
+    # persisting longer into the future. This makes the MPC react faster
+    # when the lead accelerates away (sees the gap growing sooner).
+    if personality == log.LongitudinalPersonality.traffic and a_lead > 0.3:
+      a_lead_tau *= TRAFFIC_LEAD_TAU_FACTOR
 
     # MPC will not converge if immediate crash is expected
     # Clip lead distance to what is still possible to brake for
@@ -363,8 +370,8 @@ class LongitudinalMpc:
     v_ego = self.x0[1]
     self.status = radarstate.leadOne.status or radarstate.leadTwo.status
 
-    lead_xv_0 = self.process_lead(radarstate.leadOne)
-    lead_xv_1 = self.process_lead(radarstate.leadTwo)
+    lead_xv_0 = self.process_lead(radarstate.leadOne, personality)
+    lead_xv_1 = self.process_lead(radarstate.leadTwo, personality)
 
     # To estimate a safe distance from a moving lead, we calculate how much stopping
     # distance that lead needs as a minimum. We can add that to the current distance
@@ -422,9 +429,10 @@ class LongitudinalMpc:
 
     # Fake an obstacle for cruise, this ensures smooth acceleration to set speed
     # when the leads are no factor.
+    cruise_max_accel = 1.6 if personality == log.LongitudinalPersonality.traffic else CRUISE_MAX_ACCEL
     v_lower = v_ego + (T_IDXS * CRUISE_MIN_ACCEL * 1.05)
     # TODO does this make sense when max_a is negative?
-    v_upper = v_ego + (T_IDXS * CRUISE_MAX_ACCEL * 1.05)
+    v_upper = v_ego + (T_IDXS * cruise_max_accel * 1.05)
     v_cruise_clipped = np.clip(v_cruise * np.ones(N+1), v_lower, v_upper)
     cruise_obstacle = np.cumsum(T_DIFFS * v_cruise_clipped) + get_safe_obstacle_distance(v_cruise_clipped, t_follow, personality)
 
