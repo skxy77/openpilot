@@ -395,12 +395,19 @@ class LongitudinalMpc:
       # Gate negative offsets (gap-increasing) by lead speed similarity.
       # When lead is stopped/slow, don't push obstacle backward (would delay braking).
       # When lead is at similar speed (lead_speed_scale=0), apply full negative offset.
+      # Additionally, when closing fast on a slower lead, add a closing-speed component
+      # that pulls the obstacle closer (negative), triggering earlier gentle braking.
+      closing_speed_0 = np.clip(v_predicted - lead_xv_0[:,1], 0.0, 1e8)
+      closing_offset_0 = np.interp(closing_speed_0, [5.0, 10.0, 15.0], [0.0, 0.6, 1.0]) * closing_speed_0
+      closing_speed_1 = np.clip(v_predicted - lead_xv_1[:,1], 0.0, 1e8)
+      closing_offset_1 = np.interp(closing_speed_1, [5.0, 10.0, 15.0], [0.0, 0.6, 1.0]) * closing_speed_1
+
       traffic_offset_0 = np.where(target_offset_traj >= 0,
                                   target_offset_traj,
-                                  target_offset_traj * (1.0 - lead_0_speed_scale))
+                                  target_offset_traj * (1.0 - lead_0_speed_scale)) - closing_offset_0
       traffic_offset_1 = np.where(target_offset_traj >= 0,
                                   target_offset_traj,
-                                  target_offset_traj * (1.0 - lead_1_speed_scale))
+                                  target_offset_traj * (1.0 - lead_1_speed_scale)) - closing_offset_1
 
       lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1]) + traffic_offset_0
       lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1]) + traffic_offset_1
